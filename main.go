@@ -241,6 +241,7 @@ func sendAlertToDingTalk(problemStations []AQIData, accessToken string) error {
 	title := fmt.Sprintf("广州市空气质量监测站点数据异常警报(%s)", formattedTime)
 
 	text := "### 🚨 广州市空气质量监测站点数据异常警报\n"
+	text += "#### " + formattedTime + "\n"
 	text += "以下站点存在数据缺失问题，请及时关注：\n\n"
 
 	for _, station := range problemStations {
