@@ -7,7 +7,7 @@
 *.test
 *.xlsx
 .env
-amaptrafficindex
+AQIwebhook
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
