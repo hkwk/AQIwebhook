@@ -358,7 +358,7 @@ func sendAlertToWechatWork(problemStations []AQIData, webhookKey string, client 
 		)
 	}
 
-	markdownContent += "> 请相关技术人员尽快检查设备状态和数据传输链路。"
+	markdownContent += "> 请相关技术人员尽快检查设备状态和数据传输链路。（缺失数据基于总站发布平台）"
 
 	webhookURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", webhookKey)
 	webhookData := WechatWorkWebhook{
@@ -421,7 +421,7 @@ func sendAlertToDingTalk(problemStations []AQIData, accessToken string, client *
 		)
 	}
 
-	text += "> 请相关技术人员尽快检查设备状态和数据传输链路。"
+	text += "> 请相关技术人员尽快检查设备状态和数据传输链路。（缺失数据基于总站发布平台）"
 
 	webhookURL := fmt.Sprintf("https://oapi.dingtalk.com/robot/send?access_token=%s", accessToken)
 	webhookData := DingTalkWebhook{
