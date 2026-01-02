@@ -1,0 +1,26 @@
+# Zig-based cross compilation from Windows to Linux.
+# Requires Zig in PATH: https://ziglang.org/download/
+
+[target.x86_64-unknown-linux-gnu]
+linker = "D:/workspace/rust/AQIwebbook/tools/zigcc.cmd"
+ar = "D:/workspace/rust/AQIwebbook/tools/zigar.cmd"
+# If you need older distro compatibility, consider:
+# rustflags = ["-C", "link-arg=-target", "-C", "link-arg=x86_64-linux-gnu.2.17"]
+rustflags = ["-C", "link-arg=-target", "-C", "link-arg=x86_64-linux-gnu"]
+
+[target.x86_64-unknown-linux-musl]
+linker = "D:/workspace/rust/AQIwebbook/tools/zigcc.cmd"
+ar = "D:/workspace/rust/AQIwebbook/tools/zigar.cmd"
+rustflags = [
+	"-C", "link-self-contained=no",
+	"-C", "link-arg=-target",
+	"-C", "link-arg=x86_64-linux-musl",
+]
+
+# Build scripts using the `cc` crate (e.g. `ring`) look for CC/AR, not the rustc linker.
+# Set target-specific env vars so they use Zig instead of `x86_64-linux-(musl|gnu)-gcc`.
+[env]
+CC_x86_64_unknown_linux_gnu = { value = "D:/workspace/rust/AQIwebbook/tools/zigcc-linux-gnu.cmd", force = true }
+AR_x86_64_unknown_linux_gnu = { value = "D:/workspace/rust/AQIwebbook/tools/zigar.cmd", force = true }
+CC_x86_64_unknown_linux_musl = { value = "D:/workspace/rust/AQIwebbook/tools/zigcc-linux-musl.cmd", force = true }
+AR_x86_64_unknown_linux_musl = { value = "D:/workspace/rust/AQIwebbook/tools/zigar.cmd", force = true }

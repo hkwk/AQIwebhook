@@ -7,12 +7,17 @@
 
 ### 编译程序
 ```bash
-git clone https://github.com/hkwk/AQIwebhook.git
-cd AQIwebhook
-go build
+cargo build --release --target x86_64-unknown-linux-musl
 ```
 
-### 创建环境变量
+### Build Windows Binary:
+
+```bash
+cargo build --release
+```
+
+## Create Env Variables
+
 ```bash
 touch .env
 echo "WEBHOOK_KEY=xxxx" >> .env # 企业微信机器人webhook key
