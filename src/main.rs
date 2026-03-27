@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context, Result};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
@@ -176,24 +176,58 @@ async fn fetch_aqi_data(client: &reqwest::Client) -> Result<Vec<AQIData>> {
     Ok(data)
 }
 
-fn is_missing(value: &Option<String>) -> bool {
+fn is_missing_factor_value(value: &Option<String>) -> bool {
+    // New API uses "NA" and "/" as missing placeholders.
+    // Be tolerant of null/empty as well.
     match value.as_deref() {
         None => true,
         Some(v) => {
             let v = v.trim();
-            v.is_empty() || v == "—"
+            if v.is_empty() {
+                return true;
+            }
+            if v == "/" {
+                return true;
+            }
+            if v.eq_ignore_ascii_case("NA") {
+                return true;
+            }
+            // Backward compatible placeholders
+            if v == "—" {
+                return true;
+            }
+            false
         }
     }
 }
 
+fn count_missing_factors(station: &AQIData) -> usize {
+    // Only the following six factors are used for alerting.
+    let mut count = 0;
+    if is_missing_factor_value(&station.o3) {
+        count += 1;
+    }
+    if is_missing_factor_value(&station.no2) {
+        count += 1;
+    }
+    if is_missing_factor_value(&station.pm10) {
+        count += 1;
+    }
+    if is_missing_factor_value(&station.pm25) {
+        count += 1;
+    }
+    if is_missing_factor_value(&station.so2) {
+        count += 1;
+    }
+    if is_missing_factor_value(&station.co) {
+        count += 1;
+    }
+    count
+}
+
 fn has_missing_data(station: &AQIData) -> bool {
-    is_missing(&station.aqi)
-        || is_missing(&station.pm25)
-        || is_missing(&station.pm10)
-        || is_missing(&station.o3)
-        || is_missing(&station.no2)
-        || is_missing(&station.so2)
-        || is_missing(&station.co)
+    // Alert only when >= 3 of the six factors are missing.
+    count_missing_factors(station) >= 3
 }
 
 fn is_ignored_station(station: &AQIData) -> bool {
@@ -206,25 +240,22 @@ fn is_ignored_station(station: &AQIData) -> bool {
 
 fn get_missing_factors(station: &AQIData) -> Vec<&'static str> {
     let mut missing = Vec::new();
-    if is_missing(&station.aqi) {
-        missing.push("AQI");
-    }
-    if is_missing(&station.pm25) {
-        missing.push("PM2.5");
-    }
-    if is_missing(&station.pm10) {
-        missing.push("PM10");
-    }
-    if is_missing(&station.o3) {
+    if is_missing_factor_value(&station.o3) {
         missing.push("O3");
     }
-    if is_missing(&station.no2) {
+    if is_missing_factor_value(&station.no2) {
         missing.push("NO2");
     }
-    if is_missing(&station.so2) {
+    if is_missing_factor_value(&station.pm10) {
+        missing.push("PM10");
+    }
+    if is_missing_factor_value(&station.pm25) {
+        missing.push("PM2.5");
+    }
+    if is_missing_factor_value(&station.so2) {
         missing.push("SO2");
     }
-    if is_missing(&station.co) {
+    if is_missing_factor_value(&station.co) {
         missing.push("CO");
     }
     missing
@@ -247,10 +278,24 @@ fn format_time(problem_stations: &[AQIData]) -> String {
         return "Unknown".to_string();
     };
 
-    match DateTime::parse_from_rfc3339(tp) {
-        Ok(dt) => dt.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S").to_string(),
-        Err(_) => tp.to_string(),
+    // API samples include timestamps without timezone, e.g. "2026-03-27T15:00:00".
+    if let Ok(dt) = DateTime::parse_from_rfc3339(tp) {
+        return dt
+            .with_timezone(&Local)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
     }
+
+    for fmt in ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"] {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(tp, fmt) {
+            if let Some(local_dt) = Local.from_local_datetime(&naive).single() {
+                return local_dt.format("%Y-%m-%d %H:%M:%S").to_string();
+            }
+            return naive.format("%Y-%m-%d %H:%M:%S").to_string();
+        }
+    }
+
+    tp.to_string()
 }
 
 async fn send_alert_to_wechat_work(
@@ -346,7 +391,7 @@ async fn send_alert_to_dingtalk(
             format_missing_factors(&missing)
         ));
     }
-    text.push_str("> 请相关技术人员尽快检查设备状态和数据传输链路。（缺失数据基于总站发布平台）");
+    text.push_str("> 请复核（缺失数据基于总站发布平台）");
 
     let webhook_url = format!(
         "https://oapi.dingtalk.com/robot/send?access_token={}",

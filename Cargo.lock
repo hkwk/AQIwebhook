@@ -3,17 +3,6 @@
 version = 4
 
 [[package]]
-name = "AQIwebbook"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "reqwest",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -95,6 +84,17 @@ dependencies = [
  "iana-time-zone",
  "num-traits",
  "windows-link",
+]
+
+[[package]]
+name = "cnAQImonitor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "reqwest",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
